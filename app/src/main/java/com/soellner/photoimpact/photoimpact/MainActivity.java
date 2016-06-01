@@ -72,6 +72,12 @@ public class MainActivity extends AppCompatActivity {
             _bitmap = (Bitmap) extras.get("data");
             ImageView imageView = (ImageView) findViewById(R.id.uploadedImage);
             imageView.setImageBitmap(_bitmap);
+
+            if(_bitmap!=null) {
+                _uploadButton.setText("Upload Photo");
+
+            }
+
         }
     }
 

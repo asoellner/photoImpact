@@ -1,17 +1,15 @@
 package com.soellner.photoimpact.service.photo;
 
 import android.graphics.Bitmap;
+import android.util.Log;
 
-import org.glassfish.jersey.client.ClientConfig;
-import org.glassfish.jersey.client.ClientResponse;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.List;
 
-
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.MediaType;
 
 /**
  * Created by asoel on 06.06.2016.
@@ -19,26 +17,62 @@ import javax.ws.rs.core.MediaType;
 public class PhotoServiceImpl implements PhotoService {
 
 
+
+
     @Override
     public void upload(Bitmap bitmap) {
+        try {
 
-        Client client = ClientBuilder.newClient();
-        WebTarget webTarget = client.target("localhost:8080/SampleApp/upload");
-        String response = webTarget.request().get(String.class);
+            String charset = "UTF-8";
+            File uploadFile = convertBitmapToFile(bitmap);
+            String requestURL = "http://localhost:8080";
 
-        final File fileToUpload = new File("C:/Users/Public/Pictures/Desert.jpg");
+            MultipartUtility multipart = new MultipartUtility(requestURL, charset);
 
-        final FormDataMultiPart multiPart = new FormDataMultiPart();
-        if (fileToUpload != null) {
-            multiPart.bodyPart(new FileDataBodyPart("file", fileToUpload,
-                    MediaType.APPLICATION_OCTET_STREAM_TYPE));
+//            multipart.addHeaderField("User-Agent", "CodeJava");
+//            multipart.addHeaderField("Test-Header", "Header-Value");
+
+            multipart.addFormField("user_id", "asoel");
+            multipart.addFormField("user_name", "Alexander");
+
+            multipart.addFilePart("image", uploadFile);
+
+            List<String> response = multipart.finish();
+
+            Log.v("rht", "SERVER REPLIED:");
+
+            for (String line : response) {
+                Log.v("rht", "Line : " + line);
+
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
-        final ClientResponse clientResp = resource.type(
-                MediaType.MULTIPART_FORM_DATA_TYPE).post(ClientResponse.class,
-                multiPart);
-        System.out.println("Response: " + clientResp.getClientResponseStatus());
+    }
 
-        client.destroy();
+    private File convertBitmapToFile(Bitmap bitmap) {
+        File file = new File("");
+        try {
+            file.createNewFile();
+
+            //Convert bitmap to byte array
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 0, bos);
+            byte[] bitmapdata = bos.toByteArray();
+
+            //write the bytes in file
+            FileOutputStream fos = new FileOutputStream(file);
+            fos.write(bitmapdata);
+            fos.flush();
+            fos.close();
+            return file;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 }

@@ -4,6 +4,7 @@ android {
     compileSdkVersion 23
     buildToolsVersion "23.0.3"
 
+
     defaultConfig {
         applicationId "com.soellner.photoimpact"
         minSdkVersion 19
@@ -24,5 +25,10 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.4.0'
     compile 'org.glassfish.jersey.containers:jersey-container-servlet:2.14'
+    compile 'org.apache.httpcomponents:httpcore:4.4'
+    compile 'org.apache.httpcomponents:httpmime:4.4'
+
+
+
 
 }

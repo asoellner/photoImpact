@@ -1,4 +1,4 @@
-package com.soellner.photoimpact.photoimpact;
+package com.soellner.photoimpact;
 
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -12,6 +12,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.RemoteViews;
 import android.widget.Toast;
+
+import com.soellner.photoimpact.photoimpact.R;
 
 import java.io.ByteArrayOutputStream;
 

@@ -2,10 +2,16 @@ package com.soellner.photoimpact;
 
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Environment;
 import android.os.Message;
+import android.os.StrictMode;
 import android.preference.PreferenceActivity;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
@@ -24,14 +30,30 @@ import com.loopj.android.http.Base64;
 import com.loopj.android.http.JsonHttpResponseHandler;
 import com.soellner.photoimpact.photoimpact.R;
 import com.loopj.android.http.AsyncHttpResponseHandler;
+import com.soellner.photoimpact.service.photo.MultipartUtility;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.URL;
+import java.net.URLConnection;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 
 import javax.ws.rs.core.MediaType;
 
@@ -47,9 +69,13 @@ public class MainActivity extends AppCompatActivity {
     protected static final int RETRY_MESSAGE = 5;
     protected static final int CANCEL_MESSAGE = 6;
     private static final String LOG_TAG = "AsyncHttpRH";
-    ;
+    static final int REQUEST_TAKE_PHOTO = 1;
+    private File _fullImage;
+
+
     static final int REQUEST_IMAGE_CAPTURE = 1;
     private Bitmap _bitmap;
+
     private Button _uploadButton;
 
 
@@ -58,6 +84,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+
+        StrictMode.setThreadPolicy(policy);
+
+
         _uploadButton = (Button) findViewById(R.id.uploadButton);
         if (savedInstanceState != null) {
 
@@ -65,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
 
             ImageView imageView = (ImageView) findViewById(R.id.uploadedImage);
             _bitmap = savedInstanceState.getParcelable("bitmap");
+            //_orgBitmap = savedInstanceState.getParcelable("bitmap");
             if (_bitmap != null) {
                 imageView.setImageBitmap(_bitmap);
                 _uploadButton.setText("Upload Photo");
@@ -80,109 +112,70 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 if (_bitmap != null) {
                     //Upload Photo
-                    new HttpRequestTask().execute();
+                    try {
 
-/*
+                        FileInputStream fis = new FileInputStream(_fullImage);
+                        Bitmap bm = BitmapFactory.decodeStream(fis);
 
-                    AsyncHttpClient client = new AsyncHttpClient();
-                    client.get("http://172.20.3.52:8080/SampleApp/greeting/testRest", new JsonHttpResponseHandler() {
-                        @Override
-                        public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                            System.err.println("");
+                        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                        bm.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+                        byte[] byteArray = byteArrayOutputStream.toByteArray();
+
+                        String imageEncoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
+
+
+                        JSONObject obj = new JSONObject();
+
+                        obj.put("image", imageEncoded);
+
+
+                        URL url = new URL("http://192.168.1.124:8080/SampleApp/greeting/crunchifyService");
+                        URLConnection connection = url.openConnection();
+                        connection.setDoOutput(true);
+                        connection.setRequestProperty("Content-Type", "application/json");
+                        connection.setConnectTimeout(5000);
+                        connection.setReadTimeout(5000);
+                        OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
+                        out.write(obj.toString());
+                        out.close();
+
+                        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+
+                        while (in.readLine() != null) {
                         }
-
-*/
-/*
-                        @Override
-                        public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-                            String jsonString = new String(responseBody);
-                            try {
-                                JSONObject jsonObject = new JSONObject(jsonString);
-                                System.err.println("");
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                        *//*
+                        System.out.println("\nCrunchify REST Service Invoked Successfully..");
+                        in.close();
 
 
-                        @Override
-                        public void onFinish() {
-                            super.onFinish();
-                        }
-
-                        @Override
-                        protected void handleMessage(Message message) {
-                            //super.handleMessage(message);
-                            Object[] response;
-                            try {
-                                switch (message.what) {
-                                    case SUCCESS_MESSAGE:
-                                        response = (Object[]) message.obj;
-                                        if (response != null && response.length >= 3) {
-                                            onSuccess((Integer) response[0], (Header[]) response[1], (byte[]) response[2]);
-                                        } else {
-                                            AsyncHttpClient.log.e(LOG_TAG, "SUCCESS_MESSAGE didn't got enough params");
-                                        }
-                                        break;
-                                    case FAILURE_MESSAGE:
-                                        response = (Object[]) message.obj;
-                                        if (response != null && response.length >= 4) {
-                                            onFailure((Integer) response[0], (Header[]) response[1], (byte[]) response[2], (Throwable) response[3]);
-                                        } else {
-                                            AsyncHttpClient.log.e(LOG_TAG, "FAILURE_MESSAGE didn't got enough params");
-                                        }
-                                        break;
-                                    case START_MESSAGE:
-                                        onStart();
-                                        break;
-                                    case FINISH_MESSAGE:
-                                        onFinish();
-                                        break;
-                                    case PROGRESS_MESSAGE:
-                                        response = (Object[]) message.obj;
-                                        if (response != null && response.length >= 2) {
-                                            try {
-                                                onProgress((Long) response[0], (Long) response[1]);
-                                            } catch (Throwable t) {
-                                                AsyncHttpClient.log.e(LOG_TAG, "custom onProgress contains an error", t);
-                                            }
-                                        } else {
-                                            AsyncHttpClient.log.e(LOG_TAG, "PROGRESS_MESSAGE didn't got enough params");
-                                        }
-                                        break;
-                                    case RETRY_MESSAGE:
-                                        response = (Object[]) message.obj;
-                                        if (response != null && response.length == 1) {
-                                            onRetry((Integer) response[0]);
-                                        } else {
-                                            AsyncHttpClient.log.e(LOG_TAG, "RETRY_MESSAGE didn't get enough params");
-                                        }
-                                        break;
-                                    case CANCEL_MESSAGE:
-                                        onCancel();
-                                        break;
-                                }
-                            } catch (Throwable error) {
-                                onUserException(error);
-                            }
-
-
-                        }
-
-                        @Override
-                        public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                            System.err.println("");
-                        }
-                    });
-*/
-
-
-                    Toast.makeText(getApplicationContext(), "Upload Started", Toast.LENGTH_LONG).show();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    Toast.makeText(getApplicationContext(), "Upload Done", Toast.LENGTH_LONG).show();
                     return;
                 }
 
+                /*
                 //take Photo
+                Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                // Ensure that there's a camera activity to handle the intent
+                if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+                    // Create the File where the photo should go
+                    File photoFile = null;
+                    try {
+                        photoFile = createImageFile();
+                    } catch (IOException ex) {
+                        // Error occurred while creating the File
+
+                    }
+                    // Continue only if the File was successfully created
+                    if (photoFile != null) {
+                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
+                                Uri.fromFile(photoFile));
+                        startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+                    }
+                }
+
+*/
                 Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                 if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
                     startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
@@ -200,6 +193,7 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             Bundle extras = data.getExtras();
             _bitmap = (Bitmap) extras.get("data");
+
             ImageView imageView = (ImageView) findViewById(R.id.uploadedImage);
             imageView.setImageBitmap(_bitmap);
 
@@ -221,50 +215,48 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private class HttpRequestTask extends AsyncTask<Void, Void, Greeting > {
-        @Override
-        protected Greeting  doInBackground(Void... params) {
-            try {
-                final String url = "http://172.20.3.52:8080/SampleApp/greeting/testRest";
+    private File convertBitmapToFile(Bitmap bitmap) {
+        File file = new File(this.getCacheDir(), "temp.jpg");
+        try {
+            file.createNewFile();
 
+            //Convert bitmap to byte array
 
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.PNG, 0, bos);
+            byte[] bitmapdata = bos.toByteArray();
 
+            //write the bytes in file
+            FileOutputStream fos = new FileOutputStream(file);
+            fos.write(bitmapdata);
+            fos.flush();
+            fos.close();
+            return file;
 
-                Bitmap image = BitmapFactory.decodeResource(getResources(), R.drawable.myImage);
-                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                image.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
-                String encodedString = Base64.encodeToString(byteArrayOutputStream.toByteArray(), Base64.DEFAULT);
-                reqParams.put("image",encodedString);
-                client.post(IMAGE_POST_URL, reqParams, new AsyncHttpResponseHandler() {....});
-
-
-                http://stackoverflow.com/questions/16939241/send-data-to-rest-service-from-java
-
-                RestTemplate restTemplate = new RestTemplate();
-                restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
-                Greeting  greeting = restTemplate.getForObject(url, Greeting.class);
-                return greeting;
-
-            } catch (Exception e) {
-                Log.e("MainActivity", e.getMessage(), e);
-            }
-
-            return null;
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
-        @Override
-        protected void onPostExecute(Greeting  greeting) {
-            System.err.println("");
-            //Toast.makeText(getApplicationContext(), greeting.getContent(), Toast.LENGTH_LONG).show();
-
-            /*
-            TextView greetingIdText = (TextView) findViewById(R.id.id_value);
-            TextView greetingContentText = (TextView) findViewById(R.id.content_value);
-            greetingIdText.setText(greeting.getId());
-            greetingContentText.setText(greeting.getContent());
-            */
-        }
-
+        return null;
     }
 
+    private File createImageFile() throws IOException {
+        // Create an image file name
+        String mCurrentPhotoPath;
+
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES);
+        //   _fullImage = File.createTempFile(
+        //          imageFileName,  /* prefix */
+        //         ".jpg",         /* suffix */
+        //        storageDir      /* directory */
+        //);
+        _fullImage = new File(this.getCacheDir(), imageFileName);
+
+        // Save a file: path for use with ACTION_VIEW intents
+        mCurrentPhotoPath = "file:" + _fullImage.getAbsolutePath();
+        return _fullImage;
+    }
 }

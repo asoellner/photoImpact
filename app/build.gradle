@@ -19,9 +19,11 @@ android {
         }
     }
     packagingOptions{
-        exclude 'META-INF/DEPENDENCIES'
-        exclude 'META-INF/NOTICE'
+        exclude 'META-INF/ASL2.0'
         exclude 'META-INF/LICENSE'
+        exclude 'META-INF/license.txt'
+        exclude 'META-INF/NOTICE'
+        exclude 'META-INF/notice.txt'
     }
 }
 
@@ -30,9 +32,11 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.4.0'
     compile 'org.glassfish.jersey.containers:jersey-container-servlet:2.14'
-    compile 'org.apache.httpcomponents:httpcore:4.4'
-    compile 'org.apache.httpcomponents:httpmime:4.4'
-
+    //compile 'org.apache.httpcomponents:httpcore:4.4'
+    //compile 'org.apache.httpcomponents:httpmime:4.4'
+    compile 'org.springframework.android:spring-android-rest-template:1.0.1.RELEASE'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.3.2'
+    compile 'com.loopj.android:android-async-http:1.4.9'
 
 
 

@@ -7,4 +7,6 @@ import android.graphics.Bitmap;
  */
 public interface PhotoService {
     void upload(Bitmap bitmap);
+
+    void uploadWithRest(Bitmap bitmap);
 }

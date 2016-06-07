@@ -17,6 +17,11 @@ import java.util.List;
 public class PhotoServiceImpl implements PhotoService {
 
 
+    @Override
+    public void uploadWithRest(Bitmap bitmap) {
+
+    }
+
 
 
     @Override
@@ -50,6 +55,7 @@ public class PhotoServiceImpl implements PhotoService {
         }
 
     }
+
 
     private File convertBitmapToFile(Bitmap bitmap) {
         File file = new File("");

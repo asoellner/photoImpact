@@ -7,15 +7,16 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="com.soellner.photoimpact.photoimpact.MainActivity">
+    tools:context="com.soellner.photoimpact.MainActivity">
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Take Photo"
         android:id="@+id/uploadButton"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="146dp" />
+        android:layout_marginTop="39dp"
+        android:layout_below="@+id/uploadedImage"
+        android:layout_centerHorizontal="true" />
 
     <ImageView
         android:layout_width="wrap_content"
@@ -23,6 +24,7 @@
         android:id="@+id/uploadedImage"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
-        android:minHeight="150dp"
-        android:minWidth="250dp" />
+        android:minHeight="250dp"
+        android:minWidth="300dp"
+        android:nestedScrollingEnabled="true" />
 </RelativeLayout>

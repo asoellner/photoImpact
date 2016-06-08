@@ -1,5 +1,8 @@
 package com.soellner.photoimpact;
 
+import android.content.ContentResolver;
+import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
@@ -7,6 +10,9 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
@@ -48,12 +54,16 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+
+import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import javax.ws.rs.core.MediaType;
 
@@ -71,12 +81,14 @@ public class MainActivity extends AppCompatActivity {
     private static final String LOG_TAG = "AsyncHttpRH";
     static final int REQUEST_TAKE_PHOTO = 1;
     private File _fullImage;
-
+    public static final String FILE_SEPARATOR = System.getProperty("file.separator");
 
     static final int REQUEST_IMAGE_CAPTURE = 1;
+    static final int REQUEST_IMAGE_PICK = 2;
     private Bitmap _bitmap;
 
     private Button _uploadButton;
+    private Uri _mImageUri;
 
 
     @Override
@@ -90,10 +102,19 @@ public class MainActivity extends AppCompatActivity {
 
 
         _uploadButton = (Button) findViewById(R.id.uploadButton);
+
         if (savedInstanceState != null) {
 
-            savedInstanceState.getByteArray("bitmap");
 
+            if (_mImageUri != null) {
+                setUploadImage();
+            }
+
+            _mImageUri = savedInstanceState.getParcelable("mImageUri");
+            if (_mImageUri != null) {
+                setUploadImage();
+            }
+           /*
             ImageView imageView = (ImageView) findViewById(R.id.uploadedImage);
             _bitmap = savedInstanceState.getParcelable("bitmap");
             //_orgBitmap = savedInstanceState.getParcelable("bitmap");
@@ -103,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 imageView.setImageBitmap(null);
             }
+*/
 
         }
 
@@ -154,33 +176,8 @@ public class MainActivity extends AppCompatActivity {
                     return;
                 }
 
-                /*
-                //take Photo
-                Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                // Ensure that there's a camera activity to handle the intent
-                if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-                    // Create the File where the photo should go
-                    File photoFile = null;
-                    try {
-                        photoFile = createImageFile();
-                    } catch (IOException ex) {
-                        // Error occurred while creating the File
 
-                    }
-                    // Continue only if the File was successfully created
-                    if (photoFile != null) {
-                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
-                                Uri.fromFile(photoFile));
-                        startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
-                    }
-                }
-
-*/
-                Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-                    startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-                }
-
+                takePhoto();
 
             }
         });
@@ -188,30 +185,144 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    //called after camera intent finished
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
-            Bundle extras = data.getExtras();
-            _bitmap = (Bitmap) extras.get("data");
+    public void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        if (_mImageUri == null) {
+            return;
+        }
 
+
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK)
+            this.getContentResolver().notifyChange(_mImageUri, null);
+
+        if (_mImageUri != null) {
+            setUploadImage();
+        }
+
+
+    }
+
+    private void setUploadImage() {
+        ContentResolver cr = this.getContentResolver();
+        try {
+            _bitmap = MediaStore.Images.Media.getBitmap(cr, _mImageUri);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (_bitmap != null) {
+            /*
+            int width = _bitmap.getWidth();
+            int height = _bitmap.getHeight();
+            float scaleWidth = ((float) 300) / width;
+            float scaleHeight = ((float) 250) / height;
+            // CREATE A MATRIX FOR THE MANIPULATION
+            Matrix matrix = new Matrix();
+            // RESIZE THE BIT MAP
+            matrix.postScale(scaleWidth, scaleHeight);
+
+            // "RECREATE" THE NEW BITMAP
+            Bitmap resizedBitmap = Bitmap.createBitmap(
+                    _bitmap, 0, 0, width, height, matrix, false);
+            _bitmap.recycle();
+*/
             ImageView imageView = (ImageView) findViewById(R.id.uploadedImage);
-            imageView.setImageBitmap(_bitmap);
+            imageView.setImageBitmap(scaleBitmap(_bitmap).to);
 
-            if (_bitmap != null) {
-                _uploadButton.setText("Upload Photo");
 
-            }
+            _uploadButton.setText("Upload Photo");
 
         }
     }
 
+    private BitmapDrawable scaleBitmap(Bitmap bitmap) {
+
+        int width = 0;
+
+        try {
+            width = bitmap.getWidth();
+        } catch (NullPointerException e) {
+            throw new NoSuchElementException("Can't find bitmap on given view/drawable");
+        }
+
+        int height = bitmap.getHeight();
+        int bounding = dpToPx(250);
+        Log.i("Test", "original width = " + Integer.toString(width));
+        Log.i("Test", "original height = " + Integer.toString(height));
+        Log.i("Test", "bounding = " + Integer.toString(bounding));
+
+        // Determine how much to scale: the dimension requiring less scaling is
+        // closer to the its side. This way the image always stays inside your
+        // bounding box AND either x/y axis touches it.
+        float xScale = ((float) bounding) / width;
+        float yScale = ((float) bounding) / height;
+        float scale = (xScale <= yScale) ? xScale : yScale;
+        Log.i("Test", "xScale = " + Float.toString(xScale));
+        Log.i("Test", "yScale = " + Float.toString(yScale));
+        Log.i("Test", "scale = " + Float.toString(scale));
+
+        // Create a matrix for the scaling and add the scaling data
+        Matrix matrix = new Matrix();
+        matrix.postScale(scale, scale);
+
+        // Create a new bitmap and convert it to a format understood by the ImageView
+        Bitmap scaledBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true);
+        width = scaledBitmap.getWidth(); // re-use
+        height = scaledBitmap.getHeight(); // re-use
+        BitmapDrawable result = new BitmapDrawable(scaledBitmap);
+        Log.i("Test", "scaled width = " + Integer.toString(width));
+        Log.i("Test", "scaled height = " + Integer.toString(height));
+    }
+
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
-        if (_bitmap == null) {
+        if (_mImageUri == null) {
             return;
         }
+
+        setUploadImage();
+
         super.onSaveInstanceState(outState);
-        outState.putParcelable("bitmap", _bitmap);
+        outState.putParcelable("mImageUri", _mImageUri);
+    }
+
+
+    private void takePhoto() {
+
+        try {
+            File tempDir = Environment.getExternalStorageDirectory();
+            File filesDir = new File(tempDir.getAbsolutePath() + FILE_SEPARATOR + "PhotoImpact" + FILE_SEPARATOR + "DCIM");
+            if (!filesDir.exists()) {
+                filesDir.mkdir();
+            }
+
+            int time = (int) (System.currentTimeMillis());
+            Timestamp tsTemp = new Timestamp(time);
+            long ts = tsTemp.getTime();
+
+            String photoFileName = "Photo_" + ts + ".jpg";
+            File photoFile = new File(filesDir.getAbsolutePath(), photoFileName);
+            _mImageUri = Uri.fromFile(photoFile);
+
+            Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            //_mImageUri = Uri.fromFile(photoFile);
+            cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, _mImageUri);
+            //start camera intent
+            startActivityForResult(cameraIntent, REQUEST_IMAGE_CAPTURE);
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void choosePhoto() {
+        Intent pickPhoto = new Intent(Intent.ACTION_PICK,
+                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        startActivityForResult(pickPhoto, REQUEST_IMAGE_PICK);
     }
 
 
@@ -240,23 +351,9 @@ public class MainActivity extends AppCompatActivity {
         return null;
     }
 
-    private File createImageFile() throws IOException {
-        // Create an image file name
-        String mCurrentPhotoPath;
-
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES);
-        //   _fullImage = File.createTempFile(
-        //          imageFileName,  /* prefix */
-        //         ".jpg",         /* suffix */
-        //        storageDir      /* directory */
-        //);
-        _fullImage = new File(this.getCacheDir(), imageFileName);
-
-        // Save a file: path for use with ACTION_VIEW intents
-        mCurrentPhotoPath = "file:" + _fullImage.getAbsolutePath();
-        return _fullImage;
+    private int dpToPx(int dp) {
+        float density = getApplicationContext().getResources().getDisplayMetrics().density;
+        return Math.round((float)dp * density);
     }
+
 }

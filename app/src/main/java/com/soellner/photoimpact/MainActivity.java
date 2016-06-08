@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 
@@ -52,7 +53,6 @@ public class MainActivity extends AppCompatActivity {
 
     private Button _uploadButton;
     private Uri _mImageUri;
-
 
 
     @Override
@@ -107,9 +107,19 @@ public class MainActivity extends AppCompatActivity {
                 if (_bitmap != null) {
                     //Upload Photo
                     try {
-                        File photoFile = new File(_mImageUri.getPath());
-                        FileInputStream fis = new FileInputStream(photoFile);
-                        Bitmap bm = BitmapFactory.decodeStream(fis);
+
+                        //Todo show PrgressBar
+                        InputStream imageStream = getContentResolver().openInputStream(_mImageUri);
+
+
+                        //File photoFile = new File(_mImageUri.getPath());
+                        //FileInputStream fis = new FileInputStream(photoFile);
+
+                        Bitmap bm = BitmapFactory.decodeStream(imageStream);
+
+
+                        //resize bitmap
+                        bm = scaleBitmap(bm, 600);
 
                         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                         bm.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
@@ -171,14 +181,16 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_IMAGE_PICK && resultCode == RESULT_OK) {
             _mImageUri = intent.getData();
 
+
             try {
                 _bitmap = MediaStore.Images.Media.getBitmap(
                         getContentResolver(), _mImageUri);
                 ImageView imageView = (ImageView) findViewById(R.id.uploadedImage);
 
+
                 assert _bitmap != null;
                 rotateImage();
-                imageView.setImageBitmap(scaleBitmap(_bitmap));
+                imageView.setImageBitmap(scaleBitmap(_bitmap, 350));
             } catch (FileNotFoundException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -209,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
 
                 assert _bitmap != null;
                 ImageView imageView = (ImageView) findViewById(R.id.uploadedImage);
-                imageView.setImageBitmap(scaleBitmap(_bitmap));
+                imageView.setImageBitmap(scaleBitmap(_bitmap, 350));
 
 
                 _uploadButton.setText("Upload Photo");
@@ -251,7 +263,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private Bitmap scaleBitmap(Bitmap bitmap) {
+    private Bitmap scaleBitmap(Bitmap bitmap, int size) {
 
         int width = 0;
 
@@ -262,7 +274,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         int height = bitmap.getHeight();
-        int bounding = dpToPx(250);
+        int bounding = dpToPx(size);
         Log.i("Test", "original width = " + Integer.toString(width));
         Log.i("Test", "original height = " + Integer.toString(height));
         Log.i("Test", "bounding = " + Integer.toString(bounding));

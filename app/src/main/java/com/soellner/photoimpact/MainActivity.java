@@ -3,6 +3,7 @@ package com.soellner.photoimpact;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -189,8 +190,18 @@ public class MainActivity extends AppCompatActivity {
 
 
                 assert _bitmap != null;
-                rotateImage();
+                String[] filePathColumn = {MediaStore.Images.Media.DATA};
+
+                Cursor cursor = getContentResolver().query(
+                        _mImageUri, filePathColumn, null, null, null);
+                cursor.moveToFirst();
+
+                int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+                String filePath = cursor.getString(columnIndex);
+                cursor.close();
+                rotateImage(filePath);
                 imageView.setImageBitmap(scaleBitmap(_bitmap, 350));
+                _uploadButton.setText("Upload Photo");
             } catch (FileNotFoundException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -216,7 +227,8 @@ public class MainActivity extends AppCompatActivity {
                 ExifInterface exif = new ExifInterface(photoFile.toString());
 
                 //rotate image
-                rotateImage();
+
+                rotateImage(photoFile.getPath());
 
 
                 assert _bitmap != null;
@@ -232,11 +244,12 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void rotateImage() throws IOException {
+    private void rotateImage(String path) throws IOException {
+
 
         int orientation = ExifInterface.ORIENTATION_NORMAL;
-        File photoFile = new File(_mImageUri.getPath());
-        ExifInterface exif = new ExifInterface(photoFile.getAbsolutePath());
+        // File photoFile = new File(_mImageUri.getPath());
+        ExifInterface exif = new ExifInterface(path);
 
 
         orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
@@ -259,6 +272,11 @@ public class MainActivity extends AppCompatActivity {
     public static Bitmap rotateBitmap(Bitmap bitmap, int degrees) {
         Matrix matrix = new Matrix();
         matrix.postRotate(degrees);
+
+        //BitmapFactory.Options opts = new BitmapFactory.Options();
+        //opts.inJustDecodeBounds = false;
+        //opts.inPreferredConfig = Bitmap.Config.RGB_565;
+        //opts.inDither = true;
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
     }
 

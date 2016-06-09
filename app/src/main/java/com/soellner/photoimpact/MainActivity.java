@@ -30,7 +30,6 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
     static final int REQUEST_PERMISSION = 3;
     private Bitmap _bitmap;
 
+    private Button _takePhotoButton;
     private Button _uploadButton;
     private Uri _mImageUri;
 
@@ -66,7 +66,11 @@ public class MainActivity extends AppCompatActivity {
         StrictMode.setThreadPolicy(policy);
 
 
+        _takePhotoButton = (Button) findViewById(R.id.takePhotoButton);
         _uploadButton = (Button) findViewById(R.id.uploadButton);
+        assert _uploadButton != null;
+
+        _uploadButton.setEnabled(false);
 
         if (savedInstanceState != null) {
 
@@ -83,8 +87,9 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
-        addUploadPhotoListener();
+        addTakePhotoListener();
         addPickPhotoListener();
+        addUploadPhotoListener();
 
 
     }
@@ -112,12 +117,7 @@ public class MainActivity extends AppCompatActivity {
                         //Todo show PrgressBar
                         InputStream imageStream = getContentResolver().openInputStream(_mImageUri);
 
-
-                        //File photoFile = new File(_mImageUri.getPath());
-                        //FileInputStream fis = new FileInputStream(photoFile);
-
                         Bitmap bm = BitmapFactory.decodeStream(imageStream);
-
 
                         //resize bitmap
                         bm = scaleBitmap(bm, 600);
@@ -154,12 +154,18 @@ public class MainActivity extends AppCompatActivity {
                         e.printStackTrace();
                     }
                     Toast.makeText(getApplicationContext(), "Upload Done", Toast.LENGTH_LONG).show();
-                    return;
+
                 }
 
+            }
+        });
+    }
 
+    private void addTakePhotoListener() {
+        assert _takePhotoButton != null;
+        _takePhotoButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
                 takePhoto();
-
             }
         });
 
@@ -171,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
 
 
-        //photo taken
+        //photo taken from cam
         if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
             if (_mImageUri != null) {
                 showTakenPhoto();
@@ -201,7 +207,7 @@ public class MainActivity extends AppCompatActivity {
                 cursor.close();
                 rotateImage(filePath);
                 imageView.setImageBitmap(scaleBitmap(_bitmap, 350));
-                _uploadButton.setText("Upload Photo");
+                _uploadButton.setEnabled(true);
             } catch (FileNotFoundException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -234,9 +240,8 @@ public class MainActivity extends AppCompatActivity {
                 assert _bitmap != null;
                 ImageView imageView = (ImageView) findViewById(R.id.uploadedImage);
                 imageView.setImageBitmap(scaleBitmap(_bitmap, 350));
+                _uploadButton.setEnabled(true);
 
-
-                _uploadButton.setText("Upload Photo");
             }
         } catch (IOException e) {
             e.printStackTrace();

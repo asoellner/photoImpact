@@ -1,14 +1,19 @@
 package com.soellner.photoimpact;
 
 import android.Manifest;
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Typeface;
 import android.media.ExifInterface;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Environment;
 import android.os.StrictMode;
 import android.provider.MediaStore;
@@ -20,6 +25,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.loopj.android.http.Base64;
@@ -55,6 +62,8 @@ public class MainActivity extends AppCompatActivity {
     private Button _uploadButton;
     private Uri _mImageUri;
 
+
+    Integer _count =1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,49 +120,7 @@ public class MainActivity extends AppCompatActivity {
         _uploadButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (_bitmap != null) {
-                    //Upload Photo
-                    try {
-
-                        //Todo show PrgressBar
-                        InputStream imageStream = getContentResolver().openInputStream(_mImageUri);
-
-                        Bitmap bm = BitmapFactory.decodeStream(imageStream);
-
-                        //resize bitmap
-                        bm = scaleBitmap(bm, 600);
-
-                        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                        bm.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
-                        byte[] byteArray = byteArrayOutputStream.toByteArray();
-
-                        String imageEncoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
-
-
-                        JSONObject obj = new JSONObject();
-
-                        obj.put("image", imageEncoded);
-
-
-                        URL url = new URL("http://192.168.1.124:8080/SampleApp/greeting/crunchifyService");
-                        URLConnection connection = url.openConnection();
-                        connection.setDoOutput(true);
-                        connection.setRequestProperty("Content-Type", "application/json");
-                        connection.setConnectTimeout(5000);
-                        connection.setReadTimeout(5000);
-                        OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
-                        out.write(obj.toString());
-                        out.close();
-
-                        BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-
-                        System.out.println("\nCrunchify REST Service Invoked Successfully..");
-                        in.close();
-
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    Toast.makeText(getApplicationContext(), "Upload Done", Toast.LENGTH_LONG).show();
+                    new UploadTask().execute();
 
                 }
 
@@ -408,5 +375,70 @@ public class MainActivity extends AppCompatActivity {
         return Math.round((float) dp * density);
     }
 
+    private class UploadTask extends AsyncTask<String,Void,String>{
+        ProgressDialog pDialog;
+        @Override
+        protected void onPreExecute(){
+            pDialog = new ProgressDialog(MainActivity.this);
+            pDialog.setMessage("Uploading...");
+            pDialog.show();
+        }
+        @Override
+        protected String doInBackground(String... params) {
 
+            try {
+                InputStream imageStream = getContentResolver().openInputStream(_mImageUri);
+                Bitmap bm = BitmapFactory.decodeStream(imageStream);
+
+                //resize bitmap
+                bm = scaleBitmap(bm, 600);
+
+                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                bm.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+                byte[] byteArray = byteArrayOutputStream.toByteArray();
+
+                String imageEncoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
+
+
+                JSONObject obj = new JSONObject();
+
+                obj.put("image", imageEncoded);
+
+
+                //URL url = new URL("http://192.168.1.124:8080/SampleApp/greeting/crunchifyService");
+                URL url = new URL("http://172.20.3.52:8080/SampleApp/greeting/crunchifyService");
+                URLConnection connection = url.openConnection();
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json");
+                connection.setConnectTimeout(5000);
+                connection.setReadTimeout(5000);
+                OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
+                out.write(obj.toString());
+                out.close();
+
+                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+
+                System.out.println("\nCrunchify REST Service Invoked Successfully..");
+                in.close();
+
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+
+            return null;
+        }
+        protected void onPostExecute(String params){
+            super.onPostExecute(params);
+            pDialog.dismiss();
+            TextView resultText = (TextView) findViewById(R.id.resultText);
+            resultText.setTextColor(Color.rgb(0,240,0));
+            resultText.setTypeface(null, Typeface.BOLD);
+            resultText.setText("Upload successful");
+
+
+        }
+
+    }
 }

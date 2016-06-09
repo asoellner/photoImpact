@@ -45,4 +45,15 @@
         android:layout_alignParentEnd="true"
         android:layout_toEndOf="@+id/takePhotoButton" />
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/resultText"
+        android:layout_marginTop="26dp"
+        android:layout_below="@+id/takePhotoButton"
+        android:layout_centerHorizontal="true"
+        android:textSize="32sp"
+        android:text="" />
+
+
 </RelativeLayout>

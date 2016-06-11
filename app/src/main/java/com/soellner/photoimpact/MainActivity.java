@@ -66,13 +66,13 @@ public class MainActivity extends AppCompatActivity {
     //private String SERVER_URL="http://192.168.1.124:8080/SampleApp/greeting/crunchifyService";
 
     //henny
-    private String SERVER_URL="http://192.168.1.139:8080/SampleApp/greeting/crunchifyService";
+    private String SERVER_URL = "http://192.168.1.139:8080/SampleApp/greeting/crunchifyService";
 
     //work
     //private String SERVER_URL="http://172.20.3.52:8080/SampleApp/greeting/crunchifyService";
 
 
-    Integer _count =1;
+    Integer _count = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -385,18 +385,41 @@ public class MainActivity extends AppCompatActivity {
         return Math.round((float) dp * density);
     }
 
-    private class UploadTask extends AsyncTask<String,Void,String>{
+    private class UploadTask extends AsyncTask<String, Void, String> {
         ProgressDialog pDialog;
+        private byte[] _byteArray;
+
         @Override
-        protected void onPreExecute(){
-            pDialog = new ProgressDialog(MainActivity.this);
-            pDialog.setMessage("Uploading...");
+        protected void onPreExecute() {
+            try {
+                pDialog = new ProgressDialog(MainActivity.this);
+                InputStream imageStream = getContentResolver().openInputStream(_mImageUri);
+                Bitmap bm = BitmapFactory.decodeStream(imageStream);
+
+                //resize bitmap
+                bm = scaleBitmap(bm, 400);
+
+                ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                bm.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
+                _byteArray = byteArrayOutputStream.toByteArray();
+
+                String size = humanReadableByteCount(_byteArray.length, true);
+
+                pDialog.setMessage("Uploading " + size);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+
             pDialog.show();
         }
+
         @Override
         protected String doInBackground(String... params) {
 
             try {
+                /*
                 InputStream imageStream = getContentResolver().openInputStream(_mImageUri);
                 Bitmap bm = BitmapFactory.decodeStream(imageStream);
 
@@ -406,14 +429,13 @@ public class MainActivity extends AppCompatActivity {
                 ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                 bm.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);
                 byte[] byteArray = byteArrayOutputStream.toByteArray();
-
-                String imageEncoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
+*/
+                String imageEncoded = Base64.encodeToString(_byteArray, Base64.DEFAULT);
 
 
                 JSONObject obj = new JSONObject();
 
                 obj.put("image", imageEncoded);
-
 
 
                 //URL url = new URL("http://192.168.1.124:8080/SampleApp/greeting/crunchifyService");
@@ -442,11 +464,12 @@ public class MainActivity extends AppCompatActivity {
 
             return null;
         }
-        protected void onPostExecute(String params){
+
+        protected void onPostExecute(String params) {
             super.onPostExecute(params);
             pDialog.dismiss();
             TextView resultText = (TextView) findViewById(R.id.resultText);
-            resultText.setTextColor(Color.rgb(0,240,0));
+            resultText.setTextColor(Color.rgb(0, 240, 0));
             resultText.setTypeface(null, Typeface.BOLD);
             resultText.setText("Upload successful");
 
@@ -454,4 +477,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
+
+    public static String humanReadableByteCount(long bytes, boolean si) {
+        int unit = si ? 1000 : 1024;
+        if (bytes < unit) return bytes + " B";
+        int exp = (int) (Math.log(bytes) / Math.log(unit));
+        String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp - 1) + (si ? "" : "i");
+        return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
+    }
+
 }

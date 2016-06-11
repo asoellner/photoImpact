@@ -62,12 +62,22 @@ public class MainActivity extends AppCompatActivity {
     private Button _uploadButton;
     private Uri _mImageUri;
 
+    //keller
+    //private String SERVER_URL="http://192.168.1.124:8080/SampleApp/greeting/crunchifyService";
+
+    //henny
+    private String SERVER_URL="http://192.168.1.139:8080/SampleApp/greeting/crunchifyService";
+
+    //work
+    //private String SERVER_URL="http://172.20.3.52:8080/SampleApp/greeting/crunchifyService";
+
 
     Integer _count =1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
 
         setContentView(R.layout.activity_main);
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
@@ -405,8 +415,11 @@ public class MainActivity extends AppCompatActivity {
                 obj.put("image", imageEncoded);
 
 
+
                 //URL url = new URL("http://192.168.1.124:8080/SampleApp/greeting/crunchifyService");
-                URL url = new URL("http://172.20.3.52:8080/SampleApp/greeting/crunchifyService");
+                URL url = new URL(SERVER_URL);
+
+                //URL url = new URL("http://172.20.3.52:8080/SampleApp/greeting/crunchifyService");
                 URLConnection connection = url.openConnection();
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json");

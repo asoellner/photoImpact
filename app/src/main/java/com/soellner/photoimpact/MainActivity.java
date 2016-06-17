@@ -32,6 +32,7 @@ import android.widget.Toast;
 import com.loopj.android.http.Base64;
 import com.soellner.photoimpact.photoimpact.R;
 
+import org.glassfish.hk2.api.Metadata;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -69,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
     //private String SERVER_URL = "http://192.168.1.139:8080/SampleApp/greeting/crunchifyService";
 
     //work
-    private String SERVER_URL="http://172.20.3.52:8080/SampleApp/greeting/crunchifyService";
+    private String SERVER_URL = "http://172.20.3.52:8080/SampleApp/greeting/crunchifyService";
 
 
     Integer _count = 1;
@@ -207,7 +208,7 @@ public class MainActivity extends AppCompatActivity {
 
                 //get EXIF Infos
                 File photoFile = new File(_mImageUri.getPath());
-                ExifInterface exif = new ExifInterface(photoFile.toString());
+                //ExifInterface exif = new ExifInterface(photoFile.toString());
 
                 //rotate image
 
@@ -432,11 +433,34 @@ public class MainActivity extends AppCompatActivity {
                 byte[] byteArray = byteArrayOutputStream.toByteArray();
 */
                 String imageEncoded = Base64.encodeToString(_byteArray, Base64.DEFAULT);
-
+                File photoFile = new File(_mImageUri.getPath());
+                ExifInterface exif = new ExifInterface(photoFile.toString());
 
                 JSONObject obj = new JSONObject();
 
                 obj.put("image", imageEncoded);
+                obj.put("TAG_DATETIME", getTagString(ExifInterface.TAG_DATETIME, exif));
+                obj.put("TAG_GPS_LATITUDE", getTagString(ExifInterface.TAG_GPS_LATITUDE, exif));
+                //obj.put("TAG_GPS_LATITUDE_REF", getTagString(ExifInterface.TAG_GPS_LATITUDE_REF, exif));
+                obj.put("TAG_GPS_LONGITUDE", getTagString(ExifInterface.TAG_GPS_LONGITUDE, exif));
+                //obj.put("TAG_GPS_LONGITUDE_REF", getTagString(ExifInterface.TAG_GPS_LONGITUDE_REF, exif));
+
+              /*
+
+                String myAttribute="Exif information ---\n";
+                myAttribute += getTagString(ExifInterface.TAG_DATETIME, exif);
+                myAttribute += getTagString(ExifInterface.TAG_FLASH, exif);
+                myAttribute += getTagString(ExifInterface.TAG_GPS_LATITUDE, exif);
+                myAttribute += getTagString(ExifInterface.TAG_GPS_LATITUDE_REF, exif);
+                myAttribute += getTagString(ExifInterface.TAG_GPS_LONGITUDE, exif);
+                myAttribute += getTagString(ExifInterface.TAG_GPS_LONGITUDE_REF, exif);
+                myAttribute += getTagString(ExifInterface.TAG_IMAGE_LENGTH, exif);
+                myAttribute += getTagString(ExifInterface.TAG_IMAGE_WIDTH, exif);
+                myAttribute += getTagString(ExifInterface.TAG_MAKE, exif);
+                myAttribute += getTagString(ExifInterface.TAG_MODEL, exif);
+                myAttribute += getTagString(ExifInterface.TAG_ORIENTATION, exif);
+                myAttribute += getTagString(ExifInterface.TAG_WHITE_BALANCE, exif);
+*/
 
 
                 //URL url = new URL("http://192.168.1.124:8080/SampleApp/greeting/crunchifyService");
@@ -485,6 +509,10 @@ public class MainActivity extends AppCompatActivity {
         int exp = (int) (Math.log(bytes) / Math.log(unit));
         String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp - 1) + (si ? "" : "i");
         return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
+    }
+
+    private String getTagString(String tag, ExifInterface exif) {
+        return (exif.getAttribute(tag) + "\n");
     }
 
 }

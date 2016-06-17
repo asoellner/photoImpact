@@ -66,10 +66,10 @@ public class MainActivity extends AppCompatActivity {
     //private String SERVER_URL="http://192.168.1.124:8080/SampleApp/greeting/crunchifyService";
 
     //henny
-    private String SERVER_URL = "http://192.168.1.139:8080/SampleApp/greeting/crunchifyService";
+    //private String SERVER_URL = "http://192.168.1.139:8080/SampleApp/greeting/crunchifyService";
 
     //work
-    //private String SERVER_URL="http://172.20.3.52:8080/SampleApp/greeting/crunchifyService";
+    private String SERVER_URL="http://172.20.3.52:8080/SampleApp/greeting/crunchifyService";
 
 
     Integer _count = 1;
@@ -394,10 +394,11 @@ public class MainActivity extends AppCompatActivity {
             try {
                 pDialog = new ProgressDialog(MainActivity.this);
                 InputStream imageStream = getContentResolver().openInputStream(_mImageUri);
-                Bitmap bm = BitmapFactory.decodeStream(imageStream);
-
+                //Bitmap bm = BitmapFactory.decodeStream(imageStream);
                 //resize bitmap
-                bm = scaleBitmap(bm, 400);
+                Bitmap bm = scaleBitmap(_bitmap, 200);
+                //Bitmap bm = scaleBitmap(_bitmap, 400);
+                //MainActivity.rotateBitmap(bm)
 
                 ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
                 bm.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream);

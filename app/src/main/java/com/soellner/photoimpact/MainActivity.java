@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
     //private String SERVER_URL = "http://192.168.1.139:8080/SampleApp/greeting/crunchifyService";
 
     //work
-    private String SERVER_URL = "http://172.20.3.52:8080/SampleApp/greeting/crunchifyService";
+    private String SERVER_URL = "http://172.20.3.52:8080/SampleApp/main/uploadImage";
 
 
     Integer _count = 1;
@@ -84,6 +84,19 @@ public class MainActivity extends AppCompatActivity {
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
 
         StrictMode.setThreadPolicy(policy);
+
+
+        //check permissions
+        if (ActivityCompat.checkSelfPermission(getBaseContext(), Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getBaseContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    REQUEST_PERMISSION);
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    REQUEST_PERMISSION);
+        }
 
 
         _takePhotoButton = (Button) findViewById(R.id.takePhotoButton);
@@ -421,6 +434,18 @@ public class MainActivity extends AppCompatActivity {
         protected String doInBackground(String... params) {
 
             try {
+
+
+                String[] filePathColumn = {MediaStore.Images.Media.DATA};
+
+                Cursor cursor = getContentResolver().query(
+                        _mImageUri, filePathColumn, null, null, null);
+                cursor.moveToFirst();
+
+                int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+                String filePath = cursor.getString(columnIndex);
+                cursor.close();
+                //rotateImage(filePath);
                 /*
                 InputStream imageStream = getContentResolver().openInputStream(_mImageUri);
                 Bitmap bm = BitmapFactory.decodeStream(imageStream);
@@ -433,17 +458,36 @@ public class MainActivity extends AppCompatActivity {
                 byte[] byteArray = byteArrayOutputStream.toByteArray();
 */
                 String imageEncoded = Base64.encodeToString(_byteArray, Base64.DEFAULT);
-                File photoFile = new File(_mImageUri.getPath());
-                ExifInterface exif = new ExifInterface(photoFile.toString());
+                //File photoFile = new File(_mImageUri.getPath());
+                ExifInterface exif = new ExifInterface(filePath);
 
                 JSONObject obj = new JSONObject();
 
                 obj.put("image", imageEncoded);
+
                 obj.put("TAG_DATETIME", getTagString(ExifInterface.TAG_DATETIME, exif));
-                obj.put("TAG_GPS_LATITUDE", getTagString(ExifInterface.TAG_GPS_LATITUDE, exif));
-                //obj.put("TAG_GPS_LATITUDE_REF", getTagString(ExifInterface.TAG_GPS_LATITUDE_REF, exif));
-                obj.put("TAG_GPS_LONGITUDE", getTagString(ExifInterface.TAG_GPS_LONGITUDE, exif));
-                //obj.put("TAG_GPS_LONGITUDE_REF", getTagString(ExifInterface.TAG_GPS_LONGITUDE_REF, exif));
+
+                String latidue = getTagString(ExifInterface.TAG_GPS_LATITUDE, exif);
+                String longitude = getTagString(ExifInterface.TAG_GPS_LONGITUDE, exif);
+                if (latidue != null && longitude != null) {
+                    if (latidue.contains("/")) {
+                        obj.put("TAG_GPS_LATITUDE", converGPS(latidue));
+                        obj.put("TAG_GPS_LONGITUDE", converGPS(longitude));
+                    } else {
+                        obj.put("TAG_GPS_LATITUDE", getTagString(ExifInterface.TAG_GPS_LATITUDE, exif));
+                        //obj.put("TAG_GPS_LATITUDE_REF", getTagString(ExifInterface.TAG_GPS_LATITUDE_REF, exif));
+                        obj.put("TAG_GPS_LONGITUDE", getTagString(ExifInterface.TAG_GPS_LONGITUDE, exif));
+                        //obj.put("TAG_GPS_LONGITUDE_REF", getTagString(ExifInterface.TAG_GPS_LONGITUDE_REF, exif));
+                    }
+
+
+
+                } else {
+                    obj.put("TAG_GPS_LATITUDE", "");
+
+                    obj.put("TAG_GPS_LONGITUDE", "");
+                }
+
 
               /*
 
@@ -470,8 +514,8 @@ public class MainActivity extends AppCompatActivity {
                 URLConnection connection = url.openConnection();
                 connection.setDoOutput(true);
                 connection.setRequestProperty("Content-Type", "application/json");
-                connection.setConnectTimeout(5000);
-                connection.setReadTimeout(5000);
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(10000);
                 OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream());
                 out.write(obj.toString());
                 out.close();
@@ -488,6 +532,30 @@ public class MainActivity extends AppCompatActivity {
 
 
             return null;
+        }
+
+        private Float converGPS(String coordinate) {
+            Float result = null;
+            String[] DMS = coordinate.split(",", 3);
+
+            String[] stringD = DMS[0].split("/", 2);
+            Double D0 = new Double(stringD[0]);
+            Double D1 = new Double(stringD[1]);
+            Double FloatD = D0 / D1;
+
+            String[] stringM = DMS[1].split("/", 2);
+            Double M0 = new Double(stringM[0]);
+            Double M1 = new Double(stringM[1]);
+            Double FloatM = M0 / M1;
+
+            String[] stringS = DMS[2].split("/", 2);
+            Double S0 = new Double(stringS[0]);
+            Double S1 = new Double(stringS[1]);
+            Double FloatS = S0 / S1;
+
+            result = new Float(FloatD + (FloatM / 60) + (FloatS / 3600));
+
+            return result;
         }
 
         protected void onPostExecute(String params) {
@@ -512,7 +580,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String getTagString(String tag, ExifInterface exif) {
-        return (exif.getAttribute(tag) + "\n");
+        return (exif.getAttribute(tag));
     }
 
 }
